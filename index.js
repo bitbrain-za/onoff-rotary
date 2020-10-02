@@ -10,12 +10,14 @@ const Gpio = require('onoff').Gpio;
  *
  * @returns EventEmitter
  */
-function RotaryEncoder(pinA, pinB) {
+function RotaryEncoder(pinA, pinB, debounce = 0) {
 	this.gpioA = new Gpio(pinA, 'in', 'both');
 	this.gpioB = new Gpio(pinB, 'in', 'both');
 
 	this.a = 2;
 	this.b = 2;
+	this.timerExpired = true;
+	this.debounceTimer = debounce;
 
 	this.gpioA.watch((err, value) => {
 		if (err) {
@@ -43,12 +45,20 @@ function RotaryEncoder(pinA, pinB) {
 RotaryEncoder.prototype = EventEmitter.prototype;
 
 RotaryEncoder.prototype.tick = function tick() {
-	const { a, b } = this;
+	const { a, b, timerExpired, debounceTimer } = this;
+
+	if(!timerExpired){
+		return;
+	}
 
 	if (a === 0 && b === 0 || a === 1 && b === 1) {
 		this.emit('rotation', 1);
 	} else if (a === 1 && b === 0 || a === 0 && b === 1 || a === 2 && b === 0) {
 		this.emit('rotation', -1);
+	}
+	if(debounceTimer > 0){
+		timerExpired = false;
+		setTimeout(() => timerExpired = true, debounceTimer);
 	}
 
 	return this;
